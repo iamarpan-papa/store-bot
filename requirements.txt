@@ -1,1 +1,5 @@
-pip install aiogram==3.4.1 aiohttp==3.9.5 pydantic==2.7.4 pydantic-core==2.18.4 magic-filter==1.0.12
+aiogram==3.4.1
+aiohttp==3.9.5
+pydantic==2.7.4
+pydantic-core==2.18.4
+magic-filter==1.0.12
