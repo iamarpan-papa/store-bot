@@ -389,11 +389,12 @@ async def send_payment_qr(message: Message, amount: int) -> None:
     )
 
     caption = (
-    f"💳 *Auto Deposit ₹{amount}*\\n\\n"
-    f"⏳ Expires: {expires_at}\\n"
-    f"📲 Scan QR and complete payment\\n\\n"
-    f"✅ After payment click below button"
-)
+        f"💳 *Auto Deposit ₹{amount}*\\n\\n"
+        f"⏳ Expires: {expires_at}\\n"
+        f"📲 Scan QR and complete payment\\n\\n"
+        f"✅ After payment click below button"
+    )
+
     await bot.send_photo(
         chat_id=message.chat.id,
         photo=qr_url,
