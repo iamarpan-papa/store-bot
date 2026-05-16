@@ -25,7 +25,7 @@ from aiogram.types import (
 # =========================
 # CONFIG
 # =========================
-TOKEN = os.getenv("BOT_TOKEN", "8707891025:AAHn0t0O6HX0I_Fhf1x0D1N1njyIy_HGSPs")
+TOKEN = os.getenv("BOT_TOKEN", "8981204786:AAESxFvvqNaR8Ryww4Ss1udy7MsFMC_K9WY")
 ADMIN_IDS = {5815040020}
 BOT_NAME = os.getenv("BOT_NAME", "ABHIJEET STORE")
 QR_PATH = os.getenv("QR_PATH", "qr.png")
@@ -34,7 +34,7 @@ UPI_NAME = os.getenv("UPI_NAME", "BISTAN Charchil")
 SUPPORT_LINK = os.getenv("SUPPORT_LINK", "https://t.me/A_bhijeeet")
 PAYMENT_PROOF_LINK = os.getenv("PAYMENT_PROOF_LINK", "https://t.me/abhi_feedback")
 FILES_LINK = os.getenv("FILES_LINK", "https://t.me/ABHI_FILES")
-FAMPAY_API_KEY = os.getenv("FAMPAY_API_KEY", "FAM_2ca7488cf4e43efd3908151bd3060d261d511eaa0747e46f")
+FAMPAY_API_KEY = os.getenv("FAMPAY_API_KEY", "FAM_e8eeefe8729a87fb92cc35f7a7730e94a25964c132df5d49")
 FAMPAY_QR_API = os.getenv("FAMPAY_QR_API", "https://fampay.anujbots.xyz/qr.php")
 FAMPAY_VERIFY_API = os.getenv("FAMPAY_VERIFY_API", "https://fampay.anujbots.xyz/verify.php")
 
@@ -287,8 +287,7 @@ def info_kb() -> InlineKeyboardMarkup:
 def payment_action_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="✅ I have paid", callback_data="paid_btn")],
-            [InlineKeyboardButton(text="➕ Add Funds", callback_data="add_funds")],
+            [InlineKeyboardButton(text="✅ Check Payment", callback_data="paid_btn")],
             [InlineKeyboardButton(text="💬 Support", url=SUPPORT_LINK)],
         ]
     )
@@ -341,7 +340,7 @@ def http_get_json(url: str) -> dict:
         return json.loads(response.read().decode("utf-8"))
 
 async def create_fampay_qr(amount: int) -> Optional[dict]:
-    if not FAMPAY_API_KEY or FAMPAY_API_KEY == "FAM_2ca7488cf4e43efd3908151bd3060d261d511eaa0747e46f":
+    if not FAMPAY_API_KEY or FAMPAY_API_KEY == "FAM_e8eeefe8729a87fb92cc35f7a7730e94a25964c132df5d49":
         return None
     params = urllib.parse.urlencode({"upi": UPI_ID, "amount": amount})
     url = f"{FAMPAY_QR_API}?{params}"
@@ -354,7 +353,7 @@ async def create_fampay_qr(amount: int) -> Optional[dict]:
     return None
 
 async def verify_fampay_payment(order_id: str) -> Optional[dict]:
-    if not FAMPAY_API_KEY or FAMPAY_API_KEY == "FAM_2ca7488cf4e43efd3908151bd3060d261d511eaa0747e46f":
+    if not FAMPAY_API_KEY or FAMPAY_API_KEY == "FAM_e8eeefe8729a87fb92cc35f7a7730e94a25964c132df5d49":
         return None
     params = urllib.parse.urlencode({
         "order_id": order_id,
@@ -370,132 +369,37 @@ async def verify_fampay_payment(order_id: str) -> Optional[dict]:
     return None
 
 async def send_payment_qr(message: Message, amount: int) -> None:
-    # Try automatic FamPay QR first
     fam = await create_fampay_qr(amount)
-    if fam:
-        order_id = str(fam.get("order_id", ""))
-        qr_url = fam.get("qr_url")
-        expires_at = fam.get("expires_at_ist", "5 minutes")
-        if order_id:
-            set_setting(pending_key(message.from_user.id), f"AUTO_VERIFY|{amount}|{order_id}")
 
-        caption = (
-            f"💳 *Auto Deposit ₹{amount}*
-
-"
-            f"⏳ Expires: {expires_at}
-"
-            f"🔄 After payment, tap *I have paid* to auto verify."
-        )
-
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="✅ I have paid", callback_data="paid_btn")],
-                [InlineKeyboardButton(text="💬 Support", url=SUPPORT_LINK)],
-            ]
-        )
-
-        if qr_url:
-            try:
-                await message.answer_photo(photo=qr_url, caption=caption, reply_markup=kb)
-                return
-            except Exception as exc:
-                logger.exception("Failed to send FamPay QR: %s", exc)
-
-    # Fallback to manual QR
-    caption = (
-        f"💳 *Pay ₹{amount}*
-
-"
-        f"UPI ID: `{UPI_ID}`
-"
-        f"Name: `{UPI_NAME}`
-
-"
-        f"After payment, tap *I have paid* and then send your UTR / transaction reference number."
-    )
-
-    qr_full_path = os.path.join(BASE_DIR, QR_PATH)
-    if os.path.isfile(qr_full_path):
-        try:
-            await message.answer_photo(
-                photo=FSInputFile(qr_full_path),
-                caption=caption,
-                reply_markup=payment_action_kb(),
-            )
-            return
-        except Exception as exc:
-            logger.exception("Failed to send QR photo: %s", exc)
-
-    await message.answer(
-        caption + f"
-
-QR file not found or could not be sent: `{qr_full_path}`",
-        reply_markup=payment_action_kb(),
-    )
-
-
-async def notify_admins_purchase(
-    user_id: int,
-    full_name: str,
-    username: str,
-    order_id: int,
-    product_id: int,
-    product_name: str,
-    category_name: str,
-    price: int,
-    delivered_item: str,
-    balance_left: int,
-) -> None:
-    admin_text = (
-        f"🛒 *New Order*\n\n"
-        f"Order ID: `{order_id}`\n"
-        f"User ID: `{user_id}`\n"
-        f"Name: {full_name}\n"
-        f"Username: @{username if username else 'None'}\n"
-        f"Product ID: `{product_id}`\n"
-        f"Product: {product_name}\n"
-        f"Category: {category_name}\n"
-        f"Price: ₹{price}\n"
-        f"Delivered: `{delivered_item}`\n"
-        f"Remaining Balance: ₹{balance_left}\n"
-        f"Time: {datetime.utcnow().isoformat()}"
-    )
-
-    for admin_id in ADMIN_IDS:
-        try:
-            await bot.send_message(admin_id, admin_text)
-        except Exception:
-            pass
-
-
-async def send_order_history(message: Message) -> None:
-    cur.execute(
-        """
-        SELECT id, product_name, category_name, price, delivered_item, created_at
-        FROM orders
-        WHERE user_id=?
-        ORDER BY id DESC
-        LIMIT 10
-        """,
-        (message.from_user.id,),
-    )
-    rows = cur.fetchall()
-    if not rows:
-        await message.answer("You have no orders yet.", reply_markup=main_menu())
+    if not fam:
+        await message.answer("❌ Automatic payment server unavailable.")
         return
 
-    text = "📜 *Your Order History*\n\n"
-    for oid, pname, cname, price, item, created_at in rows:
-        text += (
-            f"Order #{oid}\n"
-            f"Product: {pname}\n"
-            f"Category: {cname}\n"
-            f"Price: ₹{price}\n"
-            f"Item: `{item}`\n"
-            f"Time: {created_at}\n\n"
-        )
-    await message.answer(text, reply_markup=main_menu())
+    order_id = str(fam.get("order_id", ""))
+    qr_url = fam.get("qr_url")
+    expires_at = fam.get("expires_at_ist", "5 minutes")
+
+    if not order_id or not qr_url:
+        await message.answer("❌ QR generation failed.")
+        return
+
+    set_setting(
+        pending_key(message.from_user.id),
+        f"AUTO_VERIFY|{amount}|{order_id}"
+    )
+
+    caption = (
+    f"💳 *Auto Deposit ₹{amount}*\\n\\n"
+    f"⏳ Expires: {expires_at}\\n"
+    f"📲 Scan QR and complete payment\\n\\n"
+    f"✅ After payment click below button"
+)
+    await bot.send_photo(
+        chat_id=message.chat.id,
+        photo=qr_url,
+        caption=caption,
+        reply_markup=payment_action_kb(),
+    )
 
 
 # =========================
@@ -841,7 +745,7 @@ async def buy_product(call: CallbackQuery):
             f"Tap *Add Funds* to top up.",
             reply_markup=payment_action_kb(),
         )
-        set_setting(pending_key(user_id), f"WAIT_UTR|{amount_needed}")
+        set_setting(pending_key(user_id), "AMOUNT")
         await send_payment_qr(call.message, amount_needed)
         await call.answer("Insufficient balance", show_alert=True)
         return
@@ -917,123 +821,91 @@ async def add_funds_cb(call: CallbackQuery):
 
 @dp.callback_query(F.data == "paid_btn")
 async def paid_btn_cb(call: CallbackQuery):
-    pending = get_setting(pending_key(call.from_user.id), "")
 
-    if pending.startswith("AUTO_VERIFY|"):
+    pending = get_setting(
+        pending_key(call.from_user.id),
+        ""
+    )
+
+    if not pending.startswith("AUTO_VERIFY|"):
+        await call.message.answer(
+            "❌ No active payment found."
+        )
+        return
+
+    try:
+        _, amount_raw, order_id = pending.split("|", 2)
+        amount = int(amount_raw)
+    except:
+        await call.message.answer(
+            "❌ Invalid payment session."
+        )
+        return
+
+    await call.answer("Checking payment...")
+
+    payment = await verify_fampay_payment(order_id)
+
+    if not payment:
+        await call.message.answer(
+            "❌ Payment not received yet. Try again after few seconds."
+        )
+        return
+
+    txn_id = str(
+        payment.get("transaction_id")
+        or payment.get("utr")
+        or order_id
+    )
+
+    already = get_setting(f"paid_txn:{txn_id}")
+
+    if already:
+        await call.message.answer(
+            "⚠️ Payment already processed."
+        )
+        return
+
+    add_balance(call.from_user.id, amount)
+
+    set_setting(
+        f"paid_txn:{txn_id}",
+        "1"
+    )
+
+    set_setting(
+        pending_key(call.from_user.id),
+        ""
+    )
+
+    sender = payment.get("sender_name", "Unknown")
+    utr = payment.get("utr", "N/A")
+
+    balance = get_balance(call.from_user.id)
+
+    await call.message.answer(
+        f"✅ Payment Successful\\n\\n"
+        f"💰 Amount: ₹{amount}\\n"
+        f"👤 Name: {sender}\\n"
+        f"🔢 UTR: `{utr}`\\n\\n"
+        f"💳 New Balance: ₹{balance}"
+    )
+
+    admin_text = (
+        f"💰 *New Auto Payment*\\n\\n"
+        f"User: {call.from_user.full_name}\\n"
+        f"ID: `{call.from_user.id}`\\n"
+        f"Username: @{call.from_user.username or 'None'}\\n"
+        f"Amount: ₹{amount}\\n"
+        f"UTR: `{utr}`\\n"
+        f"Status: AUTO VERIFIED"
+    )
+
+    for admin_id in ADMIN_IDS:
         try:
-            _, amount_raw, order_id = pending.split("|", 2)
-            amount = int(amount_raw)
-        except Exception:
-            await call.message.answer("❌ Invalid payment session. Please generate a new QR.")
-            await call.answer()
-            return
-
-        await call.answer("Checking payment...", show_alert=False)
-        payment = await verify_fampay_payment(order_id)
-
-        if payment:
-            txn_id = str(payment.get("transaction_id") or payment.get("utr") or order_id)
-            already = get_setting(f"paid_txn:{txn_id}")
-            if already:
-                await call.message.answer("⚠️ Payment already added.")
-                return
-
-            add_balance(call.from_user.id, amount)
-            set_setting(f"paid_txn:{txn_id}", "1")
-            set_setting(pending_key(call.from_user.id), "")
-
-            sender = payment.get("sender_name", "Unknown")
-            utr = payment.get("utr", "N/A")
-
-            await call.message.answer(
-                f"✅ *Payment Successful*
-
-"
-                f"💰 Amount: ₹{amount}
-"
-                f"👤 Name: {sender}
-"
-                f"🔢 UTR: `{utr}`
-
-"
-                f"💳 Balance added automatically."
-            )
-            return
-
-        await call.message.answer("❌ Payment not received yet. Please try again after a few seconds.")
-        return
-
-    await call.message.answer("Good. Now send your UTR / transaction reference number in chat.")
-    await call.answer("Send UTR now")
-
-
-@dp.callback_query(F.data.startswith("pay_approve:"))
-async def approve_payment(call: CallbackQuery):
-    if not is_admin(call.from_user.id):
-        await call.answer("Not allowed", show_alert=True)
-        return
-
-    req_id = int(call.data.split(":", 1)[1])
-    cur.execute("SELECT user_id, amount, status FROM payment_requests WHERE id=?", (req_id,))
-    row = cur.fetchone()
-    if not row:
-        await call.answer("Request not found", show_alert=True)
-        return
-
-    user_id, amount, status = row
-    if status != "pending":
-        await call.answer("Already processed", show_alert=True)
-        return
-
-    add_balance(user_id, int(amount))
-    cur.execute("UPDATE payment_requests SET status='approved' WHERE id=?", (req_id,))
-    conn.commit()
-
-    try:
-        await bot.send_message(user_id, f"✅ Payment approved. ₹{amount} added to your balance.")
-    except Exception:
-        pass
-
-    try:
-        await call.message.edit_text(call.message.text + "\n\n✅ Approved")
-    except Exception:
-        pass
-
-    await call.answer("Approved")
-
-
-@dp.callback_query(F.data.startswith("pay_reject:"))
-async def reject_payment(call: CallbackQuery):
-    if not is_admin(call.from_user.id):
-        await call.answer("Not allowed", show_alert=True)
-        return
-
-    req_id = int(call.data.split(":", 1)[1])
-    cur.execute("SELECT user_id, amount, status FROM payment_requests WHERE id=?", (req_id,))
-    row = cur.fetchone()
-    if not row:
-        await call.answer("Request not found", show_alert=True)
-        return
-
-    user_id, amount, status = row
-    if status != "pending":
-        await call.answer("Already processed", show_alert=True)
-        return
-
-    cur.execute("UPDATE payment_requests SET status='rejected' WHERE id=?", (req_id,))
-    conn.commit()
-
-    try:
-        await bot.send_message(user_id, f"❌ Payment rejected for request #{req_id}. Contact admin if needed.")
-    except Exception:
-        pass
-
-    try:
-        await call.message.edit_text(call.message.text + "\n\n❌ Rejected")
-    except Exception:
-        pass
-
-    await call.answer("Rejected")
+            await bot.send_message(admin_id, admin_text)
+        except:
+            pass
 
 
 # =========================
@@ -1086,20 +958,9 @@ async def text_router(message: Message):
             await message.answer("Amount must be greater than zero.", reply_markup=back_kb())
             return
 
-        set_setting(pending_key(message.from_user.id), f"WAIT_UTR|{amount}")
+        set_setting(pending_key(message.from_user.id), f"AUTO_PENDING|{amount}")
         await send_payment_qr(message, amount)
         return
-
-    if pending.startswith("WAIT_UTR|"):
-        try:
-            amount = int(pending.split("|", 1)[1])
-        except Exception:
-            amount = 0
-
-        utr = message.text.strip()
-        if len(utr) < 4:
-            await message.answer("Send a valid UTR / transaction reference.", reply_markup=back_kb())
-            return
 
         cur.execute(
             "INSERT INTO payment_requests(user_id, amount, utr, status, created_at) VALUES(?, ?, ?, 'pending', ?)",
